@@ -677,7 +677,7 @@ struct QUAD
     T z;
 }Quad;
 
-Quad<T> quadLog(const Quad *src)
+Quad<T> quadLog(const Quad<T> *src)
 {
     T alpha = acos(src->w);
     T multi = alpha / sinf(alpha);
@@ -690,7 +690,7 @@ Quad<T> quadLog(const Quad *src)
     return result;
 }
 
-Quad<T> quadExp(const Quad *src, float exponent)
+Quad<T> quadExp(const Quad<T> *src, float exponent)
 {
     if(fabs(src->w) < 0.99999f)
     {
@@ -709,4 +709,46 @@ Quad<T> quadExp(const Quad *src, float exponent)
     {
         return 0;
     }
+}
+
+Quad<T> quadSlerp(const Quad<T> *quadOne, const Quad<T> *quadTwo, double t)
+{
+    Quad<T> result;
+    double cosOmega = quadOne->w * quadTwo->w + quadOne->x * quadTwo->x + \
+                      quadOne->y * quadTwo->y + quadOne->z * quadTwo->z;
+    Quad<T> minusOne;
+    minusOne.w = quadOne->w;
+    minusOne.x = quadOne->x;
+    minusOne.y = quadOne->y;
+    minusOne.z = quadOne->z;
+    if(cosOmega < 0.0)
+    {
+        minusOne.w = -1.0 * quadOne->w;
+        minusOne.x = -1.0 * quadOne->x;
+        minusOne.y = -1.0 * quadOne->y;
+        minusOne.z = -1.0 * quadOne->z;
+        cosOmega = -1.0 * cosOmega;
+    }
+
+    double k0, k1;
+    if(cosOmega > 0.999999)
+    {
+        k0 = 1.0 - t;
+        k1 = t;
+    }
+    else
+    {
+        double sinOmega = sqrt(1.0 - cosOmega * cosOmega);
+        double omega = atan2(sinOmega, cosOmega);
+        double oneOverSinOmega = 1.0 / sinOmega;
+        k0 = sin((1.0 -t) * omega) * oneOverSinOmega;
+        k1 = sin(t * omega) * oneOverSinOmega;
+    }
+
+    result.w = minusOne.w * k0 + quadTwo->w * k1;
+    result.x = minusOne.x * k0 + quadTwo->x * k1;
+    result.y = minusOne.y * k0 + quadTwo->y * k1;
+    result.z = minusOne.z * k0 + quadTwo->z * k1;
+
+    return result;
 }
