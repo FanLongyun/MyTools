@@ -752,3 +752,307 @@ Quad<T> quadSlerp(const Quad<T> *quadOne, const Quad<T> *quadTwo, double t)
 
     return result;
 }
+
+/*
+说明:
+    MyPoint: 点结构体
+	sortX: 将点以X坐标判断大小
+	sortY: 将点以Y坐标判断大小
+	LineSegment: 线段结构体
+	makeLineSegment: 两点组成线段
+	lineSegmentLength: 求线段长
+	IsCross: 判断两线段是否有交点
+	Quadrangle: 四边形结构体
+	makeQuadrangle: 将四点组成四边形
+	IsConvexQuadr: 判断是否标准四边形
+	makeStandardQuad: 将四边形顶点按标准方式排序
+	halfLingSegment: 将线段两等分
+	quarterLineSegment: 将线段四等分
+	
+*/
+
+
+template <typename T>
+struct MyPoint
+{
+	T x;
+	T y;
+	MyPoint<T> operator=(const MyPoint<T>& source);
+};
+
+template <typename T>
+MyPoint<T> MyPoint<T>::operator=(const MyPoint<T>& source)
+{
+	this->x = source.x;
+	this->y = source.y;
+
+	return *this;
+}
+
+template <typename T>
+bool sortX(MyPoint<T> pt1, MyPoint<T> pt2)
+{
+	return pt1.x < pt2.x;
+}
+
+template <typename T>
+bool sortY(MyPoint<T> pt1, MyPoint<T> pt2)
+{
+	return pt1.y < pt2.y;
+}
+
+template <typename T>
+struct LineSegment
+{
+	MyPoint<T> P1;
+	MyPoint<T> P2;
+};
+
+template <typename T>
+LineSegment<T> makeLineSegment(MyPoint<T> A, MyPoint<T> B)
+{
+	LineSegment<T> result;
+	result.P1.x = A.x;
+	result.P1.y = A.y;
+	result.P2.x = B.x;
+	result.P2.y = B.y;
+
+	return result;
+}
+
+template <typename T>
+double lineSegmentLength(LineSegment<T> L1)
+{
+	return sqrt((L1.P1.x - L1.P2.x) * (L1.P1.x - L1.P2.x) + (L1.P1.y - L1.P2.y) * (L1.P1.y - L1.P2.y));
+}
+
+template <typename T>
+bool IsCross(LineSegment<T> AB, LineSegment<T> CD)
+{
+	double kAB, bAB, kCD, bCD;
+
+	if (AB.P2.x != AB.P1.x)
+		kAB = (double)(AB.P2.y - AB.P1.y) / (double)(AB.P2.x - AB.P1.x);
+	else
+		return false;
+	bAB = AB.P1.y - kAB * AB.P1.x;
+	if (CD.P2.x != CD.P1.x)
+		kCD = (double)(CD.P2.y - CD.P1.y) / (double)(CD.P2.x - CD.P1.x);
+	else
+		return false;
+
+	if (kAB == kCD)
+	{
+		bCD = CD.P1.y - kCD * CD.P1.x;
+		if (bAB == bCD)
+			return false;
+		else
+			return true;
+	}
+
+	LineSegment<T> AC = makeLineSegment(AB.P1, CD.P1);
+	LineSegment<T> BD = makeLineSegment(AB.P2, CD.P2);
+
+	T minACX = AC.P1.x < AC.P2.x ? AC.P1.x : AC.P2.x;
+	T maxACX = AC.P1.x > AC.P2.x ? AC.P1.x : AC.P2.x;
+	T minACY = AC.P1.y < AC.P2.y ? AC.P1.y : AC.P2.y;
+	T maxACY = AC.P1.y > AC.P2.y ? AC.P1.y : AC.P2.y;
+	T minBDX = BD.P1.x < BD.P2.x ? BD.P1.x : BD.P2.x;
+	T maxBDX = BD.P1.x > BD.P2.x ? BD.P1.x : BD.P2.x;
+	T minBDY = BD.P1.y < BD.P2.y ? BD.P1.y : BD.P2.y;
+	T maxBDY = BD.P1.y > BD.P2.y ? BD.P1.y : BD.P2.y;
+
+	double kAC, bAC, kBD, bBD, crossX, crossY;
+	if (AC.P2.x != AC.P1.x)
+	{
+		kAC = (double)(AC.P2.y - AC.P1.y) / (double)(AC.P2.x - AC.P1.x);
+		bAC = (double)(AC.P1.y - kAC * AC.P1.x);
+	}
+	else
+	{
+		kBD = (double)(BD.P2.y - BD.P1.y) / (double)(BD.P2.x - BD.P1.x);
+		bBD = BD.P1.y - kBD * BD.P1.x;
+
+		crossX = AC.P1.x;
+		crossY = kBD * crossX + bBD;
+	}
+
+	if (BD.P2.x != BD.P1.x)
+	{
+		kBD = (double)(BD.P2.y - BD.P1.y) / (double)(BD.P2.x - BD.P1.x);
+		bBD = BD.P1.y - kBD * BD.P1.x;
+	}
+	else
+	{
+		kAC = (double)(AC.P2.y - AC.P1.y) / (double)(AC.P2.x - AC.P1.x);
+		bAC = (AC.P1.y - kAC * AC.P1.x);
+		crossX = BD.P1.x;
+		crossY = kAC * crossX + bAC;
+	}
+
+	if (AC.P2.x != AC.P1.x && BD.P2.x != BD.P1.x)
+	{
+		crossX = (double)(bBD - bAC) / (double)(kAC - kBD);
+		crossY = kAC * crossX + bAC;
+	}
+
+	if (crossX >= minACX && crossX <= maxACX && crossX >= minBDX && crossX <= maxBDX && \
+		crossY >= minACY && crossY <= maxACY && crossY >= minBDY && crossY <= maxBDY)
+		return true;
+	else
+		return false;
+}
+
+template <typename T>
+struct Quadrangle
+{
+	MyPoint<T> A;
+	MyPoint<T> B;
+	MyPoint<T> C;
+	MyPoint<T> D;
+};
+
+template <typename T>
+Quadrangle<T> makeQuadrangle(std::vector<MyPoint<T>> vecQuad)
+{
+	Quadrangle<T> result;
+	result.A.x = vecQuad[0].x;
+	result.A.y = vecQuad[0].y;
+	result.B.x = vecQuad[1].x;
+	result.B.y = vecQuad[1].y;
+	result.C.x = vecQuad[2].x;
+	result.C.y = vecQuad[2].y;
+	result.D.x = vecQuad[3].x;
+	result.D.y = vecQuad[3].y;
+
+	return result;
+}
+
+template <typename T>
+bool IsConvexQuadr(Quadrangle<T> quad)
+{
+	LineSegment<T> AB = makeLineSegment(quad.A, quad.B);
+	LineSegment<T> CD = makeLineSegment(quad.C, quad.D);
+
+	return IsCross(AB, CD);
+}
+
+template <typename T>
+Quadrangle<T> makeStandardQuad(Quadrangle<T> source)
+{
+	Quadrangle<T> result;
+	std::vector<MyPoint<T>> vecPt;
+	vecPt.push_back(source.A);
+	vecPt.push_back(source.B);
+	vecPt.push_back(source.C);
+	vecPt.push_back(source.D);
+
+	std::sort(vecPt.begin(), vecPt.end(), sortX<T>);
+	std::vector<MyPoint<T>>::iterator iterVec;
+	iterVec = vecPt.begin();
+	result.A = iterVec->y < (iterVec + 1)->y ? *iterVec : *(iterVec + 1);
+	result.B = iterVec->y > (iterVec + 1)->y ? *iterVec : *(iterVec + 1);
+	result.C = (iterVec + 2)->y > (iterVec + 3)->y ? *(iterVec + 2) : *(iterVec + 3);
+	result.D = (iterVec + 2)->y < (iterVec + 3)->y ? *(iterVec + 2) : *(iterVec + 3);
+
+	return result;
+}
+
+template <typename G, typename T>
+std::vector<MyPoint<G>> halfLingSegment(LineSegment<T> source)
+{
+	MyPoint<G> halfPoint;
+	std::vector<MyPoint<G>> result;
+	MyPoint<G> _vector;
+
+	_vector.x = static_cast<G>(source.P1.x);
+	_vector.y = static_cast<G>(source.P1.y);
+
+	result.push_back(_vector);
+
+	_vector.x = source.P2.x - source.P1.x;
+	_vector.y = source.P2.y - source.P1.y;
+	_vector.x /= 2.0;
+	_vector.y /= 2.0;
+
+	halfPoint.x = source.P1.x + _vector.x;
+	halfPoint.y = source.P1.y + _vector.y;
+
+	result.push_back(halfPoint);
+	_vector.x = static_cast<G>(source.P2.x);
+	_vector.y = static_cast<G>(source.P2.y);
+	result.push_back(_vector);
+
+	return result;
+}
+
+
+template <typename G, typename T>
+std::vector<MyPoint<G>> quarterLineSegment(LineSegment<T> source)
+{
+	MyPoint<G> pushPoint;
+	std::vector<MyPoint<G>> result;
+	MyPoint<G> _vector;
+
+	_vector.x = static_cast<G>(source.P1.x);
+	_vector.y = static_cast<G>(source.P1.y);
+	result.push_back(_vector);
+
+	_vector.x = source.P2.x - source.P1.x;
+	_vector.y = source.P2.y - source.P1.y;
+
+	MyPoint<double> temp = _vector;
+
+	for (double para = 0.25; para < 1.0; para += 0.25)
+	{
+		temp.x = _vector.x * para;
+		temp.y = _vector.y * para;
+		pushPoint.x = source.P1.x + temp.x;
+		pushPoint.y = source.P1.y + temp.y;
+		result.push_back(pushPoint);
+	}
+
+	_vector.x = static_cast<G>(source.P2.x);
+	_vector.y = static_cast<G>(source.P2.y);
+	result.push_back(_vector);
+
+	return result;
+}
+
+template <typename T, typename G>
+bool PtInQuad(MyPoint<T> pt, Quadrangle<G> quad)
+{
+	MyPoint<G> _vecAB;
+	_vecAB.x = quad.B.x - quad.A.x;
+	_vecAB.y = quad.B.y - quad.A.y;
+
+	MyPoint<G> _vecBC;
+	_vecBC.x = quad.C.x - quad.B.x;
+	_vecBC.y = quad.C.y - quad.B.y;
+
+	MyPoint<G> _vecCD;
+	_vecCD.x = quad.D.x - quad.C.x;
+	_vecCD.y = quad.D.y - quad.C.y;
+
+	MyPoint<G> _vecDA;
+	_vecDA.x = quad.A.x - quad.D.x;
+	_vecDA.y = quad.A.y - quad.D.y;
+
+	MyPoint<double> ABP;
+	ABP.y = pt.y;
+	ABP.x = quad.A.x + _vecAB.x * (pt.y - quad.A.y) / _vecAB.y;
+
+	MyPoint<double> BCP;
+	BCP.x = pt.x;
+	BCP.y = _vecBC.y / _vecBC.x * (pt.x - quad.B.x) + quad.B.y;
+
+	MyPoint<double> CDP;
+	CDP.y = pt.y;
+	CDP.x = _vecCD.x / _vecCD.y * (pt.y - quad.C.y) + quad.C.x;
+
+	MyPoint<double> DAP;
+	DAP.x = pt.x;
+	DAP.y = _vecDA.y / _vecDA.x * (pt.x - quad.D.x) + quad.D.y;
+
+	return (pt.x > ABP.x) && (pt.y < BCP.y) && (pt.x < CDP.x) && (pt.y > DAP.y);
+}
