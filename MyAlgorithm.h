@@ -768,7 +768,7 @@ Quad<T> quadSlerp(const Quad<T> *quadOne, const Quad<T> *quadTwo, double t)
 	makeStandardQuad: 将四边形顶点按标准方式排序
 	halfLingSegment: 将线段两等分
 	quarterLineSegment: 将线段四等分
-	
+        PtInQuad: 判断点是否在矩形内
 */
 
 
