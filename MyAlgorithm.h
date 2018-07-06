@@ -406,7 +406,7 @@ public:
 	template <typename G>
 	Vector3 operator/=(const G&);
 	void normalize();							// 向量标准化
-	T operator*(const Vector3&) const;
+        T operator*(const Vector3<T&) const;
 	inline T mod()								// 求模
 	{
 		return sqrt(x * x + y * y + z * z);
@@ -587,7 +587,7 @@ void Vector3<T>::normalize()
 }
 
 template <typename T>
-T Vector3<T>::operator*(const Vector3& vec) const
+T Vector3<T>::operator*(const Vector3<T>& vec) const
 {
 	return (x * vec.x + y * vec.y + z * vec.z);
 }
@@ -1055,4 +1055,21 @@ bool PtInQuad(MyPoint<T> pt, Quadrangle<G> quad)
 	DAP.y = _vecDA.y / _vecDA.x * (pt.x - quad.D.x) + quad.D.y;
 
 	return (pt.x > ABP.x) && (pt.y < BCP.y) && (pt.x < CDP.x) && (pt.y > DAP.y);
+}
+
+template <typename T>
+Matrix<T> RodrigueMatrix(Vector3<T> src, Vector3<T> dst)
+{
+    double arctheta = (src * dst) / src.mod() / dst.mod();
+    double theta = acosf(arctheta);
+    Matrix<T> result(3, 3, 0);
+    result.element[0][0] = cos(theta) + src.x * src.x * (1 - cos(theta));
+    result.element[0][1] = src.x * src.y * (1 - cos(theta)) - src.z * sin(theta);
+    result.element[0][2] = src.y * sin(theta) + src.x * src.z * (1 - cos(theta));
+    result.element[1][0] = src.z * sin(theta) + src.x * src.y * (1 - cos(theta));
+    result.element[1][1] = cos(theta) + src.y * src.y * (1 - cos(theta));
+    result.element[1][2] = -1.0 * src.x * sin(theta) + src.y * src.z * (1 - cos(theta));
+    result.element[2][0] = -1.0 * src.y * sin(theta) + src.x * src.z * (1 - cos(theta));
+    result.element[2][1] = src.x * sin(theta) + src.y * src.z * (1 - cos(theta));
+    result.element[2][2] = cos(theta) + src.z * src.z * (1 - cos(theta));
 }
