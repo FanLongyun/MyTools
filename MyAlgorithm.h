@@ -33,7 +33,8 @@ struct POSITIONSTRUCT
 
 // 线性变换算法
 //DECLDIR double LinearTransform(const double& input, const double& InStart, const double& InEnd, const double& OutStart, const double& OutEnd);
-
+namespace fan
+{
 // 矩阵类
 template <typename T>
 class Matrix
@@ -360,15 +361,16 @@ Matrix<T> SetDCM(float psi, float theta, float phi)
     float rad_theta = DEG2RAD(theta);
     float rad_phi = DEG2RAD(phi);
 
-    DCM.element[0][0] = cosf(rad_psi) * cosf(rad_theta);
-    DCM.element[0][1] = sinf(rad_phi) * sinf(rad_theta) * cosf(rad_psi) - sinf(rad_psi) * cosf(rad_phi);
-    DCM.element[0][2] = cosf(rad_psi) * sinf(rad_theta) * cosf(rad_phi) + sinf(rad_psi) * sinf(rad_phi);
-    DCM.element[1][0] = sinf(rad_psi) * cosf(rad_theta);
-    DCM.element[1][1] = sinf(rad_psi) * sinf(rad_theta) * sinf(rad_phi) + cosf(rad_psi) * cosf(rad_phi);
-    DCM.element[1][2] = sinf(rad_psi) * sinf(rad_theta) * cosf(rad_phi) - cosf(rad_psi) * sinf(rad_phi);
-    DCM.element[2][0] = -1.0f * sinf(rad_theta);
-    DCM.element[2][1] = cosf(rad_theta) * sinf(rad_phi);
-    DCM.element[2][2] = cosf(rad_theta) * cosf(rad_phi);
+	DCM.element[0][0] = cosf(rad_psi) * cosf(rad_theta);
+	DCM.element[0][1] = sinf(rad_phi) * sinf(rad_theta) * cosf(rad_psi) - sinf(rad_psi) * cosf(rad_phi);
+	DCM.element[0][2] = cosf(rad_psi) * sinf(rad_theta) * cosf(rad_phi) + sinf(rad_psi) * sinf(rad_phi);
+	DCM.element[1][0] = sinf(rad_phi) * cosf(rad_theta);
+	//DCM.element[1][0] = sinf(rad_psi) * cosf(rad_theta);
+	DCM.element[1][1] = sinf(rad_psi) * sinf(rad_theta) * sinf(rad_phi) + cosf(rad_psi) * cosf(rad_phi);
+	DCM.element[1][2] = sinf(rad_psi) * sinf(rad_theta) * cosf(rad_phi) - cosf(rad_psi) * sinf(rad_phi);
+	DCM.element[2][0] = -1.0f * sinf(rad_theta);
+	DCM.element[2][1] = cosf(rad_theta) * sinf(rad_phi);
+	DCM.element[2][2] = cosf(rad_theta) * cosf(rad_phi);
 
     return DCM;
 }
@@ -378,6 +380,21 @@ Matrix<T> MakeMatrix(int row, int column, T num)
 {
     Matrix<T> mat(row, column, num);
     return mat;
+}
+
+template <typename T>
+Matrix<T> matrixMul(Matrix<T> one, Matrix<T> two)
+{
+	Matrix<T> result(one.row, two.column, 0);
+    for (int i = 0; i < one.row; i++)
+    {
+        for (int j = 0; j < two.column; j++)
+        {
+            for (int k = 0; k < one.column; k++)
+                result.element[i][j] += one.element[i][k] * two.element[k][j];
+        }
+    }
+    return result;
 }
 
 // 3D向量类
@@ -1076,4 +1093,6 @@ Matrix<T> RodrigueMatrix(Vector3<T> src, Vector3<T> dst)
     result.element[2][0] = -1.0 * src.y * sin(theta) + src.x * src.z * (1 - cos(theta));
     result.element[2][1] = src.x * sin(theta) + src.y * src.z * (1 - cos(theta));
     result.element[2][2] = cos(theta) + src.z * src.z * (1 - cos(theta));
+}
+
 }
