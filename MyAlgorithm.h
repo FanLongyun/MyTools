@@ -1162,7 +1162,7 @@ bool myTrackTrail(T DstPos[3], T DstRot[3], T SrcPos[3], T SrcRot[3], T CloseEno
 	SrcRot[0] = deltaH;
 	SrcRot[1] = deltaP;
 	SrcRot[2] = 0.0;
-	if(deltaX *deltaX + deltaY * deltaY + deltaZ * deltaZ < CloseEnough)
+	if(deltaX *deltaX + deltaY * deltaY + deltaZ * deltaZ < CloseEnough * CloseEnough)
 	{
 		return true;
 	}
