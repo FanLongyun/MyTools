@@ -1095,4 +1095,78 @@ Matrix<T> RodrigueMatrix(Vector3<T> src, Vector3<T> dst)
     result.element[2][2] = cos(theta) + src.z * src.z * (1 - cos(theta));
 }
 
+// myTrackTrail: 两点追踪渐近
+// DstPos[3]: 目标点位置
+// DstRot[3]: 目标点朝向(暂时无用)
+// SrcPos[3]: 前进点位置
+// SrcRot[3]: 前进点朝向
+// CloseEnough: 判定有效距离
+
+template<typename T>
+bool myTrackTrail(T DstPos[3], T DstRot[3], T SrcPos[3], T SrcRot[3], T CloseEnough)
+{
+	Matrix<T> m_DCM = SetDCM<T>(SrcRot[0], SrcRot[2], SrcRot[1]);
+	m_DCM.Transposition();
+	Matrix<T> m_pos(1, 3, 0);
+	m_pos.element[0][0] = 0.0;
+	m_pos.element[0][1] = 5.0;
+	m_pos.element[0][2] = 0.0;
+	Matrix<T> dst(1, 3, 0);
+	dst = matrixMul<T>(m_pos, m_DCM);
+	T tranX, tranY, tranZ;
+	tranX = dst.element[0][0];
+	tranY = dst.element[0][1];
+	tranZ = dst.element[0][2];
+	SrcPos[0] += tranX;
+	SrcPos[1] += tranY;
+	SrcPos[2] += tranZ;
+	//m_missilePos.yaw *= -1.0;
+
+	T deltaX = DstPos[0] - SrcPos[0];
+	T deltaY = DstPos[1] - SrcPos[1];
+	T deltaZ = DstPos[2] - SrcPos[2];
+	//double deltaH = RAD2DEG(atan(deltaX / deltaY))/* - m_missilePos.yaw*/;
+	T deltaH;
+	if(abs(deltaY - 0.0) < 0.00001)
+	{
+		if(deltaX > 0.0)
+		{
+			deltaH = -90.0;
+		}
+		if(deltaX < 0.0)
+			deltaH = 90.0;
+		if(deltaX - 0.0 < 0.00001)
+			deltaH = 0.0;
+	}
+	if(abs(deltaX - 0.0) < 0.0001)
+	{
+		if(deltaY > 0.0)
+			deltaH = 0.0;
+		if(deltaY < 0.0)
+			deltaH = 180.0;
+	}
+	if(deltaY > 0.0 && !(abs(deltaX - 0.0) < 0.0001))
+	{
+		deltaH = -1.0 * RAD2DEG(atan(deltaX / deltaY));
+	}
+	if(deltaY < 0.0 && deltaX < 0.0)
+	{
+		deltaH = 180.0 - RAD2DEG(atan(abs(deltaX) / abs(deltaY)));
+	}
+	if(deltaY < 0.0 && deltaX > 0.0)
+	{
+		deltaH = -180.0 + RAD2DEG(atan(deltaX / abs(deltaY)));
+	}
+	double deltaP = RAD2DEG(asin(deltaZ / sqrt(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ)))/* - m_missilePos.pitch*/;
+
+	DstRot[0] = deltaH;
+	DstRot[1] = deltaP;
+	DstRot[2] = 0.0;
+	if(deltaX *deltaX + deltaY * deltaY + deltaZ * deltaZ < CloseEnough)
+	{
+		return true;
+	}
+	return false;
+}
+
 }
