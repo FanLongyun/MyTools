@@ -1159,9 +1159,9 @@ bool myTrackTrail(T DstPos[3], T DstRot[3], T SrcPos[3], T SrcRot[3], T CloseEno
 	}
 	double deltaP = RAD2DEG(asin(deltaZ / sqrt(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ)))/* - m_missilePos.pitch*/;
 
-	DstRot[0] = deltaH;
-	DstRot[1] = deltaP;
-	DstRot[2] = 0.0;
+	SrcRot[0] = deltaH;
+	SrcRot[1] = deltaP;
+	SrcRot[2] = 0.0;
 	if(deltaX *deltaX + deltaY * deltaY + deltaZ * deltaZ < CloseEnough)
 	{
 		return true;
