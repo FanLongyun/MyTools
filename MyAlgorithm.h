@@ -422,7 +422,7 @@ public:
     Vector3 operator*=(const G&);
     template <typename G>
     Vector3 operator/=(const G&);
-    void normalize();							// 向量标准化
+    Vector3 normalize();							// 向量标准化
     T operator*(const Vector3<T>&) const;
     inline T mod()								// 求模
     {
@@ -584,10 +584,10 @@ Vector3<T> Vector3<T>::operator/=(const G& scalar)
 }
 
 template <typename T>
-void Vector3<T>::normalize()
+Vector3<T> Vector3<T>::normalize()
 {
     try{
-        if (x == y == z == 0)
+        if (x == 0 && y ==0 && z == 0)
             throw std::runtime_error("vector can't be zero.");
     }
     catch (std::runtime_error err)
@@ -618,6 +618,139 @@ Vector3<T> Vector3 <T>::CrossMult(const Vector3& vec) const
     result.z = x * vec.y - y * vec.x;
 
     return result;
+}
+
+// 2D向量类
+template <typename T>
+class Vector2
+{
+public:
+	Vector2();
+	Vector2(T x, T y);
+	Vector2(const Vector2&);
+	~Vector2();
+	Vector2 operator=(const Vector2&);
+	bool operator==(const Vector2&);
+	bool operator!=(const Vector2&);
+	void zero();								// 置为零向量
+	Vector2 operator-(const Vector2&) const;
+	Vector2 operator+(const Vector2&) const;
+	template <typename G>
+	Vector2<G> operator*(const G&);
+	template <typename G>
+	Vector2 operator/(const G&) const;
+	Vector2 operator+=(const Vector2&);
+	Vector2 operator-=(const Vector2&);
+	template <typename G>
+	Vector2 operator*=(const G&);
+	template <typename G>
+	Vector2 operator/=(const G&);
+	Vector2 normalize();							// 向量标准化
+	T operator*(const Vector2<T>&);
+	inline T mod()								// 求模
+	{
+		return sqrt(x * x + y * y);
+	}
+	Vector2 CrossMult(const Vector2&) const;	// 向量叉乘
+	T x, y;
+};
+
+template<typename T>
+Vector2<T>::Vector2()
+{
+	x = y = 0;
+}
+
+template<typename T>
+Vector2<T>::Vector2(T x, T y)
+{
+	this->x = x;
+	this->y = y;
+}
+
+template <typename T>
+Vector2<T>::Vector2(const Vector2& vec)
+{
+	this->x = vec.x;
+	this->y = vec.y;
+}
+
+template <typename T>
+Vector2<T>::~Vector2()
+{
+
+}
+
+template<typename T>
+Vector2<T> Vector2<T>::operator =(const Vector2<T>& vec)
+{
+	x = vec.x;
+	y = vec.y;
+	return *this;
+}
+
+template<typename T>
+T Vector2<T>::operator *(const Vector2<T>& vec)
+{
+	return (x * vec.x + y * vec.y);
+}
+
+template <typename T>
+template <typename G>
+Vector2<G> Vector2<T>::operator *(const G& Scalar)
+{
+	x = x * Scalar;
+	y = y * Scalar;
+	return *this;
+}
+
+template<typename T>
+template<typename G>
+Vector2<T> Vector2<T>::operator *=(const G& Scalar)
+{
+	x *= Scalar;
+	y *= Scalar;
+	return *this;
+}
+
+template<typename T>
+Vector2<T> Vector2<T>::normalize()
+{
+	if(x != 0 && y != 0)
+	{
+		x = x / mod();
+		y = y / mod();
+	}
+
+	return *this;
+}
+
+
+// vector to Euler angle. roll = 0.0
+template <typename T>
+void vec3_To_Euler(const Vector3<T>& vec3, T Euler[3])
+{
+	if(vec3.y > 0.0)
+	{
+		Euler[0] = atan(vec3.x / vec3.y);
+		if(vec3.x == 0.0)
+			Euler[0] = 0.0;
+	}
+	if (vec3.y < 0.0)
+	{
+		Euler[0] = -1.0 * PI + abs(vec3.x) / vec3.x * atan(vec3.x / vec3.y);
+	}
+	if(vec3.y == 0.0)
+	{
+		Euler[0] = -1.0 * PI / 2.0 * abs(vec3.x) / vec3.x;
+	}
+	if(vec3.x !=0 || vec3.y != 0)
+		Euler[1] = atan(vec3.z / sqrt(vec3.x * vec3.x + vec3.y * vec3.y));
+	else
+		Euler[1] = PI * abs(vec3.z) / vec3.z;
+	Euler[0] = RAD2DEG(Euler[0]);
+	Euler[1] = RAD2DEG(Euler[1]);
+	Euler[2] = 0.0;
 }
 
 template <typename T>
@@ -1105,23 +1238,6 @@ Matrix<T> RodrigueMatrix(Vector3<T> src, Vector3<T> dst)
 template<typename T>
 bool myTrackTrail(T DstPos[3], T DstRot[3], T SrcPos[3], T SrcRot[3], T CloseEnough)
 {
-	Matrix<T> m_DCM = SetDCM<T>(SrcRot[0], SrcRot[2], SrcRot[1]);
-	m_DCM.Transposition();
-	Matrix<T> m_pos(1, 3, 0);
-	m_pos.element[0][0] = 0.0;
-	m_pos.element[0][1] = 5.0;
-	m_pos.element[0][2] = 0.0;
-	Matrix<T> dst(1, 3, 0);
-	dst = matrixMul<T>(m_pos, m_DCM);
-	T tranX, tranY, tranZ;
-	tranX = dst.element[0][0];
-	tranY = dst.element[0][1];
-	tranZ = dst.element[0][2];
-	SrcPos[0] += tranX;
-	SrcPos[1] += tranY;
-	SrcPos[2] += tranZ;
-	//m_missilePos.yaw *= -1.0;
-
 	T deltaX = DstPos[0] - SrcPos[0];
 	T deltaY = DstPos[1] - SrcPos[1];
 	T deltaZ = DstPos[2] - SrcPos[2];
@@ -1162,11 +1278,46 @@ bool myTrackTrail(T DstPos[3], T DstRot[3], T SrcPos[3], T SrcRot[3], T CloseEno
 	SrcRot[0] = deltaH;
 	SrcRot[1] = deltaP;
 	SrcRot[2] = 0.0;
+
+	Matrix<T> m_DCM = SetDCM<T>(SrcRot[0], SrcRot[2], SrcRot[1]);
+	m_DCM.Transposition();
+	Matrix<T> m_pos(1, 3, 0);
+	m_pos.element[0][0] = 0.0;
+	m_pos.element[0][1] = 2.0;
+	m_pos.element[0][2] = 0.0;
+	Matrix<T> dst(1, 3, 0);
+	dst = matrixMul<T>(m_pos, m_DCM);
+	T tranX, tranY, tranZ;
+	tranX = dst.element[0][0];
+	tranY = dst.element[0][1];
+	tranZ = dst.element[0][2];
+	SrcPos[0] += tranX;
+	SrcPos[1] += tranY;
+	SrcPos[2] += tranZ;
+
 	if(deltaX *deltaX + deltaY * deltaY + deltaZ * deltaZ < CloseEnough * CloseEnough)
 	{
 		return true;
 	}
 	return false;
+}
+
+template <typename T>
+bool myTrackTrail2(T DstPos[3], T DstRot[3], T SrcPos[3], T SrcRot[3], T CloseEnough)
+{
+	Vector2<T> vecA(sin(DEG2RAD(DstRot[0])), cos(DEG2RAD(DstRot[0])));
+	Vector2<T> vecAB(SrcPos[0]- DstPos[0], SrcPos[1] - DstPos[1]);
+	T cosTheta = vecA * vecAB / (vecA.mod() * vecAB.mod());
+	vecA.normalize();
+	T vecTemp = vecAB.mod() * cosTheta;
+	Vector2<T> vecAD = vecA.operator *<T>(vecTemp);
+	vecAD *= 0.5;
+	double D[3];
+	D[0] = DstPos[0] + vecAD.x;
+	D[1] = DstPos[1] + vecAD.y;
+	D[2] = DstPos[2] + 0.0;
+
+	return myTrackTrail<double>(D, NULL, SrcPos, SrcRot, CloseEnough);
 }
 
 }
