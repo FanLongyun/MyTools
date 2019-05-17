@@ -1236,7 +1236,7 @@ Matrix<T> RodrigueMatrix(Vector3<T> src, Vector3<T> dst)
 // CloseEnough: ≈–∂®”––ßæ‡¿Î
 
 template<typename T>
-bool myTrackTrail(T DstPos[3], T DstRot[3], T SrcPos[3], T SrcRot[3], T CloseEnough)
+bool myTrackTrail(T DstPos[3], T DstRot[3], T SrcPos[3], T SrcRot[3], T CloseEnough, T Speed)
 {
 	T deltaX = DstPos[0] - SrcPos[0];
 	T deltaY = DstPos[1] - SrcPos[1];
@@ -1283,7 +1283,7 @@ bool myTrackTrail(T DstPos[3], T DstRot[3], T SrcPos[3], T SrcRot[3], T CloseEno
 	m_DCM.Transposition();
 	Matrix<T> m_pos(1, 3, 0);
 	m_pos.element[0][0] = 0.0;
-	m_pos.element[0][1] = 2.0;
+	m_pos.element[0][1] = Speed;
 	m_pos.element[0][2] = 0.0;
 	Matrix<T> dst(1, 3, 0);
 	dst = matrixMul<T>(m_pos, m_DCM);
@@ -1303,7 +1303,7 @@ bool myTrackTrail(T DstPos[3], T DstRot[3], T SrcPos[3], T SrcRot[3], T CloseEno
 }
 
 template <typename T>
-bool myTrackTrail2(T DstPos[3], T DstRot[3], T SrcPos[3], T SrcRot[3], T CloseEnough)
+bool myTrackTrail2(T DstPos[3], T DstRot[3], T SrcPos[3], T SrcRot[3], T CloseEnough, T Speed)
 {
 	Vector2<T> vecA(sin(DEG2RAD(DstRot[0])), cos(DEG2RAD(DstRot[0])));
 	Vector2<T> vecAB(SrcPos[0]- DstPos[0], SrcPos[1] - DstPos[1]);
@@ -1311,13 +1311,127 @@ bool myTrackTrail2(T DstPos[3], T DstRot[3], T SrcPos[3], T SrcRot[3], T CloseEn
 	vecA.normalize();
 	T vecTemp = vecAB.mod() * cosTheta;
 	Vector2<T> vecAD = vecA.operator *<T>(vecTemp);
-	vecAD *= 0.5;
-	double D[3];
+	vecAD *= 0.65;
+	T D[3];
 	D[0] = DstPos[0] + vecAD.x;
 	D[1] = DstPos[1] + vecAD.y;
 	D[2] = DstPos[2] + 0.0;
 
-	return myTrackTrail<double>(D, NULL, SrcPos, SrcRot, CloseEnough);
+	return myTrackTrail<T>(D, NULL, SrcPos, SrcRot, CloseEnough, Speed);
+}
+
+template <typename T>
+void worldToScreen(T eye[3], T euler[3], T dst[3], T viewport[2], T* xy)
+{
+	Matrix<T> DCM = SetDCM<T>(euler[0], euler[2], euler[1]);
+	DCM.Transposition();
+	Matrix<T>  mat(1, 3, 0);
+	mat.element[0][1] = 1.0;
+	Matrix<T> Odot(1, 3, 0);
+	Odot = matrixMul<T>(mat, DCM);
+	Vector3<T> OOdot(Odot.element[0][0], Odot.element[0][1], Odot.element[0][2]);
+	Vector3<T> OA(dst[0] - eye[0], dst[1] - eye[1], dst[2] - eye[2]);
+	T cosAlpha = OOdot * OA / OA.mod() / OOdot.mod();
+	T modOD = OA.mod() * cosAlpha;
+	Vector3<T> OD = OOdot * modOD;
+	Vector3<T> M(OD.x + eye[0], OD.y + eye[1], OD.z + eye[2]);
+	T AB = 2 * modOD * tan(DEG2RAD(viewport[1] / 2.0));
+	T BC = 2 * modOD * tan(DEG2RAD(viewport[0] / 2.0));
+	//T down[3] = {euler[0], euler[1] - 90.0, euler[2]};
+	//mat.element[0][1] = AB / 2;
+	//DCM = SetDCM<T>(down[0], down[2], down[1]);
+	//DCM.Transposition();
+	//Matrix<T> ME(1, 3, 0);
+	//ME = matrixMul<T>(mat, DCM);
+	//Vector3<T> E(ME.element[0][0] + M.x, ME.element[0][1] + M.y, ME.element[0][2] + M.z);
+	//T left[3] = { euler[0] + 90.0, euler[1], euler[2] };
+	//mat.element[0][1] = BC / 2;
+	//DCM = SetDCM<T>(left[0], left[2], left[1]);
+	//DCM.Transposition();
+	//Matrix<T> EB(1, 3, 0);
+	//EB = matrixMul<T>(mat, DCM);
+	//Vector3<T> B(EB.element[0][0] + E.x, EB.element[0][1] + E.y, EB.element[0][2] + E.z);
+	//T right[3] = { euler[0] - 90.0, euler[1], euler[2] };
+	//mat.element[0][1] = BC;
+	//DCM = SetDCM<T>(right[0], right[2], right[1]);
+	//DCM.Transposition();
+	//Matrix<T> CB(1, 3, 0);
+	//CB = matrixMul<T>(mat, DCM);
+	//Vector3<T> C(CB.element[0][0] + B.x, CB.element[0][1] + B.y, CB.element[0][2] + B.z);
+	//Vector3<T> vecBC(C.x - B.x, C.y - B.y, C.z - B.z);
+	//T up[3] = { euler[0], euler[1] + 90.0, euler[2] };
+	//mat.element[0][1] = AB;
+	//DCM = SetDCM<T>(up[0], up[2], up[1]);
+	//DCM.Transposition();
+	//Matrix<T> BA(1, 3, 0);
+	//BA = matrixMul<T>(mat, DCM);
+	//Vector3<T> A(BA.element[0][0] + B.x, BA.element[0][1] + B.y, BA.element[0][2] + B.z);
+	//mat.element[0][1] = sqrt(OD.mod() * OD.mod() + 0.25f * AB * AB + 0.25f * BC * BC);
+	//T theta = RAD2DEG(asin(AB * 0.5 / mat.element[0][1]));
+	//DCM = SetDCM<T>(euler[0] + 0.5f * viewport[0], euler[2], euler[1] - theta);
+	//DCM.Transposition();
+	//Matrix<T> matOB = matrixMul<T>(mat, DCM);
+	//Vector3<T> B(matOB.element[0][0] + eye[0], matOB.element[0][1] + eye[1], matOB.element[0][2] + eye[2]);
+	//DCM = SetDCM<T>(euler[0] + 0.5 * viewport[0], euler[2], euler[1] + theta);
+	//DCM.Transposition();
+	////mat.element[0][1] = sqrt(OD.mod() * OD.mod() + 0.25 * AB * AB + 0.25 * BC * BC);
+	//Matrix<T> matOA = matrixMul<T>(mat, DCM);
+	//Vector3<T> A(matOA.element[0][0] + eye[0], matOA.element[0][1] + eye[1], matOA.element[0][2] + eye[2]);
+	//DCM = SetDCM<T>(euler[0] - 0.5 * viewport[0], euler[2], euler[1] - theta);
+	//DCM.Transposition();
+	////mat.element[0][1] = sqrt(OD.mod() * OD.mod() + 0.25 * AB * AB + 0.25 * BC * BC);
+	//Matrix<T> matOC = matrixMul<T>(mat, DCM);
+	//Vector3<T> C(matOC.element[0][0] + eye[0], matOC.element[0][1] + eye[1], matOC.element[0][2] + eye[2]);
+	DCM = SetDCM<T>(euler[0], euler[2], euler[1] - viewport[1] * 0.5);
+	DCM.Transposition();
+	mat.element[0][1] = sqrt(OD.mod() * OD.mod() + 0.25f * AB * AB);
+	Matrix<T> OE = matrixMul(mat, DCM);
+	Vector3<T> E(OE.element[0][0] + eye[0], OE.element[0][1] + eye[1], OE.element[0][2] + eye[2]);
+	Vector3<T> ME(E.x - M.x, E.y - M.y, E.z - M.z);
+
+	DCM = SetDCM<T>(euler[0], euler[2], euler[1] + viewport[1] * 0.5);
+	DCM.Transposition();
+	mat.element[0][1] = sqrt(OD.mod() * OD.mod() + 0.25f * AB * AB);
+	Matrix<T> OG = matrixMul(mat, DCM);
+	Vector3<T> G(OG.element[0][0] + eye[0], OG.element[0][1] + eye[1], OG.element[0][2] + eye[2]);
+	Vector3<T> MG(G.x - M.x, G.y - M.y, G.z - M.z);
+
+	DCM = SetDCM<T>(euler[0] + viewport[0] * 0.5, euler[2], euler[1]);
+	DCM.Transposition();
+	mat.element[0][1] = sqrt(OD.mod() * OD.mod() + 0.25f * BC * BC);
+	Matrix<T> OF = matrixMul(mat, DCM);
+	Vector3<T> F(OF.element[0][0] + eye[0], OF.element[0][1] + eye[1], OF.element[0][2] + eye[2]);
+	Vector3<T> MF(F.x - M.x, F.y - M.y, F.z - M.z);
+
+	DCM = SetDCM<T>(euler[0] - viewport[0] * 0.5, euler[2], euler[1]);
+	DCM.Transposition();
+	mat.element[0][1] = sqrt(OD.mod() * OD.mod() + 0.25f * BC * BC);
+	Matrix<T> OH = matrixMul(mat, DCM);
+	Vector3<T> H(OH.element[0][0] + eye[0], OH.element[0][1] + eye[1], OH.element[0][2] + eye[2]);
+	Vector3<T> MH(H.x - M.x, H.y - M.y, H.z - M.z);
+
+	Vector3<T> MB = ME + MF;
+	Vector3<T> MA = MF + MG;
+	Vector3<T> MC = ME + MH;
+	Vector3<T> B(MB.x + M.x, MB.y + M.y, MB.z + M.z);
+	Vector3<T> A(MA.x + M.x, MA.y + M.y, MA.z + M.z);
+	Vector3<T> C(MC.x + M.x, MC.y + M.y, MC.z + M.z);
+
+	Vector3<T> vecBC(C.x - B.x, C.y - B.y, C.z - B.z);
+	Vector3<T> vecBA(A.x - B.x, A.y - B.y, A.z - B.z);
+	Vector3<T> BN(dst[0] - B.x, dst[1] - B.y, dst[2] - B.z);
+
+	T cosBeta = BN * vecBC / BN.mod() / vecBC.mod();
+	xy[0] = BN.mod() * cosBeta / vecBC.mod();
+	xy[1] = BN.mod() * sqrt(1 - cosBeta * cosBeta) / vecBC.mod();
+
+	xy[0] = 2 * xy[0] - 1;
+	xy[1] = 2 * xy[1] - 1;
+
+	if (abs(xy[0]) < 0.000001)
+		xy[0] = 0.0;
+	if (abs(xy[1]) < 0.000001)
+		xy[1] = 0.0;
 }
 
 }
