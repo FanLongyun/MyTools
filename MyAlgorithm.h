@@ -52,9 +52,9 @@ public:
     Matrix<G> operator / (const G& scalar) const;
     Matrix<T> Transposition();					// 转置矩阵
     T Determinant() const; 						// 行列式值
-    Matrix<T> Adjoint() const;					// 标准伴随矩阵
+    Matrix<T> Adjoint() const;					// 标准伴随矩阵/共轭矩阵
     template <typename G>
-    Matrix<G> Inverse(G&) const;					// 逆矩阵
+    Matrix<G> Inverse() const;					// 逆矩阵
     T** element;
     int row;
     int column;
@@ -257,87 +257,145 @@ Matrix<T> Matrix<T>::Transposition()
 }
 
 template <typename T>
+Matrix<T> minorMatrix(Matrix<T> mat, int row, int column)
+{
+	Matrix<T> result(mat.row - 1, mat.column - 1, 0);
+	int x = 0, y = 0;
+	for (int i = 0; i < mat.row; i++)
+	{
+		for (int j = 0; j < mat.column; j++)
+		{
+			if (i != row && j != column)
+			{
+				result.element[x][y++] = mat.element[i][j];
+				if (y == mat.column - 1)
+				{
+					x++;
+					y = 0;
+				}
+			}
+		}
+	}
+	return result;
+}
+
+template <typename T>
 T Matrix<T>::Determinant() const
 {
-    try{
-        if (this->row != 3 || this->column != 3)
-            throw std::runtime_error("row or column isn't 3.");
-    }
-    catch (std::runtime_error err){
-        return this->Determinant();
-    }
+	try {
+		if (this->row != this->column)
+			throw std::runtime_error("this matrix is not a square matrix.");
+	}
+	catch (std::runtime_error) {
+		return this->Determinant();
+	}
 
-    T add1 = element[0][0] * element[1][1] * element[2][2];
-    T add2 = element[0][1] * element[1][2] * element[2][0];
-    T add3 = element[0][2] * element[1][0] * element[2][1];
-    T min1 = element[0][0] * element[1][2] * element[2][1];
-    T min2 = element[0][1] * element[1][0] * element[2][2];
-    T min3 = element[0][2] * element[1][1] * element[2][0];
-
-    return add1 + add2 + add3 - min1 - min2 - min3;
+	T result = 0;
+	if (row == 1)
+		result = this->element[0][0];
+	else if (row == 2)
+		result = this->element[0][0] * this->element[1][1] - this->element[0][1] * this->element[1][0];
+	else
+	{
+		for (int i = 0; i < this->column; i++)
+		{
+			Matrix<T> temp = minorMatrix<T>(*this, 0, i);
+			result += this->element[0][i] * pow(-1, i) * temp.Determinant();
+		}
+	}
+	return result;
 }
 
 template <typename T>
 Matrix<T> Matrix<T>::Adjoint() const
 {
-    try{
-        if (this->row != 3 || this->column != 3)
-            throw std::runtime_error("row or column isn't 3.");
-    }
-    catch (std::runtime_error err){
-        return *this;
-    }
+	try {
+		if (this->row != this->column)
+			throw std::runtime_error("this matrix is not a square matrix.");
+	}
+	catch (std::runtime_error) {
+		return *this;
+	}
 
+	Matrix<T> result(this->row, this->column, 0);
+	for (int i = 0; i < result.row; i++)
+	{
+		for (int j = 0; j < result.column; j++)
+		{
+			Matrix<T> temp = minorMatrix<T>(*this, i, j);
+			result.element[i][j] = pow(-1, i + j) * temp.Determinant();
+		}
+	}
+	return result.Transposition();
     // 余子式矩阵
-    T a11 = element[1][1] * element[2][2] - element[1][2] * element[2][1];
-    T a12 = element[1][2] * element[2][0] - element[1][0] * element[2][2];
-    T a13 = element[1][0] * element[2][1] - element[1][1] * element[2][0];
-    T a21 = element[0][2] * element[2][1] - element[0][1] * element[2][2];
-    T a22 = element[0][0] * element[2][2] - element[0][2] * element[2][0];
-    T a23 = element[0][1] * element[2][0] - element[0][0] * element[2][1];
-    T a31 = element[0][1] * element[1][2] - element[0][2] * element[1][1];
-    T a32 = element[0][2] * element[1][0] - element[0][0] * element[1][2];
-    T a33 = element[0][0] * element[1][1] - element[0][1] * element[1][0];
+    //T a11 = element[1][1] * element[2][2] - element[1][2] * element[2][1];
+    //T a12 = element[1][2] * element[2][0] - element[1][0] * element[2][2];
+    //T a13 = element[1][0] * element[2][1] - element[1][1] * element[2][0];
+    //T a21 = element[0][2] * element[2][1] - element[0][1] * element[2][2];
+    //T a22 = element[0][0] * element[2][2] - element[0][2] * element[2][0];
+    //T a23 = element[0][1] * element[2][0] - element[0][0] * element[2][1];
+    //T a31 = element[0][1] * element[1][2] - element[0][2] * element[1][1];
+    //T a32 = element[0][2] * element[1][0] - element[0][0] * element[1][2];
+    //T a33 = element[0][0] * element[1][1] - element[0][1] * element[1][0];
 
-    Matrix<T> result(3, 3, 0);
-    result.element[0][0] = a11;
-    result.element[0][1] = a12;
-    result.element[0][2] = a13;
-    result.element[1][0] = a21;
-    result.element[1][1] = a22;
-    result.element[1][2] = a23;
-    result.element[2][0] = a31;
-    result.element[2][1] = a32;
-    result.element[2][2] = a33;
+    //Matrix<T> result(3, 3, 0);
+    //result.element[0][0] = a11;
+    //result.element[0][1] = a12;
+    //result.element[0][2] = a13;
+    //result.element[1][0] = a21;
+    //result.element[1][1] = a22;
+    //result.element[1][2] = a23;
+    //result.element[2][0] = a31;
+    //result.element[2][1] = a32;
+    //result.element[2][2] = a33;
 
-    return result.Transposition();
+    //return result.Transposition();
 }
 
 template <typename T>
 template <typename G>
-Matrix<G> Matrix<T>::Inverse(G& det) const
+Matrix<G> Matrix<T>::Inverse() const
 {
-    Matrix<G> errMat(3, 3, -1.0);
-    try{
-        if (this->row != 3 || this->column != 3)
-            throw std::runtime_error("row or column isn't 3.");
-    }
-    catch (std::runtime_error err){
-        return errMat;
-    }
-    try{
-        if (this->Determinant() == 0)
-            throw std::runtime_error("the determinant is 0.");
-    }
-    catch(std::runtime_error err){
-        return errMat;
-    }
-    Matrix<T> adjMat = this->Adjoint();
-    det = static_cast<G>(this->Determinant());
+    //Matrix<G> errMat(3, 3, -1.0);
+    //try{
+    //    if (this->row != 3 || this->column != 3)
+    //        throw std::runtime_error("row or column isn't 3.");
+    //}
+    //catch (std::runtime_error err){
+    //    return errMat;
+    //}
+    //try{
+    //    if (this->Determinant() == 0)
+    //        throw std::runtime_error("the determinant is 0.");
+    //}
+    //catch(std::runtime_error err){
+    //    return errMat;
+    //}
+    //Matrix<T> adjMat = this->Adjoint();
+    //det = static_cast<G>(this->Determinant());
 
-    Matrix<G> invMat(3, 3, 0.0);
-    invMat = adjMat / det;
-    return invMat;
+    //Matrix<G> invMat(3, 3, 0.0);
+    //invMat = adjMat / det;
+    //return invMat;
+	try {
+		if (this->row != this->column)
+			throw std::runtime_error("this matrix is not a square matrix.");
+	}
+	catch (std::runtime_error) {
+		return Matrix<G>(1, 1, 0);
+	}
+
+	Matrix<T> adj = this->Adjoint();
+	Matrix<G> result(this->row, this->column, 0);
+	T det = this->Determinant();
+	for (int i = 0; i < result.row; i++)
+	{
+		for (int j = 0; j < result.column; j++)
+		{
+			result.element[i][j] = (G)adj.element[i][j] / det;
+		}
+	}
+	return result;
 }
 
 template <typename T>
@@ -1234,6 +1292,7 @@ Matrix<T> RodrigueMatrix(Vector3<T> src, Vector3<T> dst)
 // SrcPos[3]: 前进点位置
 // SrcRot[3]: 前进点朝向
 // CloseEnough: 判定有效距离
+// Speed:		前进点行进速度
 
 template<typename T>
 bool myTrackTrail(T DstPos[3], T DstRot[3], T SrcPos[3], T SrcRot[3], T CloseEnough, T Speed)
@@ -1312,12 +1371,12 @@ bool myTrackTrail2(T DstPos[3], T DstRot[3], T SrcPos[3], T SrcRot[3], T CloseEn
 	T vecTemp = vecAB.mod() * cosTheta;
 	Vector2<T> vecAD = vecA.operator *<T>(vecTemp);
 	vecAD *= 0.65;
-	T D[3];
+	double D[3];
 	D[0] = DstPos[0] + vecAD.x;
 	D[1] = DstPos[1] + vecAD.y;
 	D[2] = DstPos[2] + 0.0;
 
-	return myTrackTrail<T>(D, NULL, SrcPos, SrcRot, CloseEnough, Speed);
+	return myTrackTrail<double>(D, NULL, SrcPos, SrcRot, CloseEnough, Speed);
 }
 
 template <typename T>
