@@ -166,7 +166,7 @@ Matrix<T> Matrix<T>::operator+(const Matrix<T>& mat) const
     for (int i = 0; i < mat.row; i++)
     {
         for (int j = 0; j < mat.column; j++)
-            result[i][j] = this->element[i][j] + mat.element[i][j];
+            result.element[i][j] = this->element[i][j] + mat.element[i][j];
     }
     return result;
 }
@@ -186,7 +186,7 @@ Matrix<T> Matrix<T>::operator-(const Matrix<T>& mat) const
     for (int i = 0; i < mat.row; i++)
     {
         for (int j = 0; j < mat.column; j++)
-            result[i][j] = this->element[i][j] - mat.element[i][j];
+            result.element[i][j] = this->element[i][j] - mat.element[i][j];
     }
     return result;
 }
@@ -300,7 +300,7 @@ T Matrix<T>::Determinant() const
 		for (int i = 0; i < this->column; i++)
 		{
 			Matrix<T> temp = minorMatrix<T>(*this, 0, i);
-			result += this->element[0][i] * pow(-1, i) * temp.Determinant();
+			result += this->element[0][i] * pow(-1.0, i) * temp.Determinant();
 		}
 	}
 	return result;
@@ -323,7 +323,7 @@ Matrix<T> Matrix<T>::Adjoint() const
 		for (int j = 0; j < result.column; j++)
 		{
 			Matrix<T> temp = minorMatrix<T>(*this, i, j);
-			result.element[i][j] = pow(-1, i + j) * temp.Determinant();
+			result.element[i][j] = pow(-1.0, i + j) * temp.Determinant();
 		}
 	}
 	return result.Transposition();
@@ -356,27 +356,6 @@ template <typename T>
 template <typename G>
 Matrix<G> Matrix<T>::Inverse() const
 {
-    //Matrix<G> errMat(3, 3, -1.0);
-    //try{
-    //    if (this->row != 3 || this->column != 3)
-    //        throw std::runtime_error("row or column isn't 3.");
-    //}
-    //catch (std::runtime_error err){
-    //    return errMat;
-    //}
-    //try{
-    //    if (this->Determinant() == 0)
-    //        throw std::runtime_error("the determinant is 0.");
-    //}
-    //catch(std::runtime_error err){
-    //    return errMat;
-    //}
-    //Matrix<T> adjMat = this->Adjoint();
-    //det = static_cast<G>(this->Determinant());
-
-    //Matrix<G> invMat(3, 3, 0.0);
-    //invMat = adjMat / det;
-    //return invMat;
 	try {
 		if (this->row != this->column)
 			throw std::runtime_error("this matrix is not a square matrix.");
@@ -399,7 +378,7 @@ Matrix<G> Matrix<T>::Inverse() const
 }
 
 template <typename T>
-Matrix<T> SetDCM(float psi, float theta, float phi)
+Matrix<T> SetDCM(float psi, float theta, float phi)		// h r p
 {
     if (psi > 180.0f)
         psi -= 360.0f;
@@ -415,21 +394,55 @@ Matrix<T> SetDCM(float psi, float theta, float phi)
         phi += 360.0f;
 
     Matrix<T> DCM(3, 3, 0);
-    float rad_psi = DEG2RAD(psi);
-    float rad_theta = DEG2RAD(theta);
-    float rad_phi = DEG2RAD(phi);
+    float rad_psi = DEG2RAD(-psi);
+    float rad_theta = DEG2RAD(-theta);
+    float rad_phi = DEG2RAD(-phi);
 
-	DCM.element[0][0] = cosf(rad_psi) * cosf(rad_theta);
-	DCM.element[0][1] = sinf(rad_phi) * sinf(rad_theta) * cosf(rad_psi) - sinf(rad_psi) * cosf(rad_phi);
-	DCM.element[0][2] = cosf(rad_psi) * sinf(rad_theta) * cosf(rad_phi) + sinf(rad_psi) * sinf(rad_phi);
-	DCM.element[1][0] = sinf(rad_phi) * cosf(rad_theta);
-	//DCM.element[1][0] = sinf(rad_psi) * cosf(rad_theta);
-	DCM.element[1][1] = sinf(rad_psi) * sinf(rad_theta) * sinf(rad_phi) + cosf(rad_psi) * cosf(rad_phi);
-	DCM.element[1][2] = sinf(rad_psi) * sinf(rad_theta) * cosf(rad_phi) - cosf(rad_psi) * sinf(rad_phi);
-	DCM.element[2][0] = -1.0f * sinf(rad_theta);
-	DCM.element[2][1] = cosf(rad_theta) * sinf(rad_phi);
-	DCM.element[2][2] = cosf(rad_theta) * cosf(rad_phi);
+	//DCM.element[0][0] = cosf(rad_psi) * cosf(rad_theta);
+	//DCM.element[0][1] = sinf(rad_phi) * sinf(rad_theta) * cosf(rad_psi) - sinf(rad_psi) * cosf(rad_phi);
+	//DCM.element[0][2] = cosf(rad_psi) * sinf(rad_theta) * cosf(rad_phi) + sinf(rad_psi) * sinf(rad_phi);
+	//DCM.element[1][0] = sinf(rad_phi) * cosf(rad_theta);
+	////DCM.element[1][0] = sinf(rad_psi) * cosf(rad_theta);
+	//DCM.element[1][1] = sinf(rad_psi) * sinf(rad_theta) * sinf(rad_phi) + cosf(rad_psi) * cosf(rad_phi);
+	//DCM.element[1][2] = sinf(rad_psi) * sinf(rad_theta) * cosf(rad_phi) - cosf(rad_psi) * sinf(rad_phi);
+	//DCM.element[2][0] = -1.0f * sinf(rad_theta);
+	//DCM.element[2][1] = cosf(rad_theta) * sinf(rad_phi);
+	//DCM.element[2][2] = cosf(rad_theta) * cosf(rad_phi);
+	Matrix<T> RotX(3, 3, 0);
+	Matrix<T> RotY(3, 3, 0);
+	Matrix<T> RotZ(3, 3, 0);
+	RotX.element[0][0] = 1.0;
+	RotX.element[0][1] = 0.0;
+	RotX.element[0][2] = 0.0;
+	RotX.element[1][0] = 0.0;
+	RotX.element[1][1] = cos(rad_theta);
+	RotX.element[1][2] = sin(rad_theta);
+	RotX.element[2][0] = 0.0;
+	RotX.element[2][1] = -1.0f * sin(rad_theta);
+	RotX.element[2][2] = cos(rad_theta);
 
+	RotY.element[0][0] = cos(rad_phi);
+	RotY.element[0][1] = 0.0;
+	RotY.element[0][2] = -1.0f * sin(rad_phi);
+	RotY.element[1][0] = 0.0;
+	RotY.element[1][1] = 1.0;
+	RotY.element[1][2] = 0.0;
+	RotY.element[2][0] = sin(rad_phi);
+	RotY.element[2][1] = 0;
+	RotY.element[2][2] = cos(rad_phi);
+
+	RotZ.element[0][0] = cos(rad_psi);
+	RotZ.element[0][1] = sin(rad_psi);
+	RotZ.element[0][2] = 0.0;
+	RotZ.element[1][0] = -1.0f * sin(rad_psi);
+	RotZ.element[1][1] = cos(rad_psi);
+	RotZ.element[1][2] = 0.0;
+	RotZ.element[2][0] = 0.0;
+	RotZ.element[2][1] = 0;
+	RotZ.element[2][2] = 1.0;
+	// Z->X->Y
+	Matrix<T> temp = RotZ * RotX;
+	DCM = temp * RotY;
     return DCM;
 }
 
@@ -1338,7 +1351,7 @@ bool myTrackTrail(T DstPos[3], T DstRot[3], T SrcPos[3], T SrcRot[3], T CloseEno
 	SrcRot[1] = deltaP;
 	SrcRot[2] = 0.0;
 
-	Matrix<T> m_DCM = SetDCM<T>(SrcRot[0], SrcRot[2], SrcRot[1]);
+	Matrix<T> m_DCM = SetDCM<T>(-SrcRot[0], -SrcRot[1], -SrcRot[2]);
 	m_DCM.Transposition();
 	Matrix<T> m_pos(1, 3, 0);
 	m_pos.element[0][0] = 0.0;
@@ -1491,6 +1504,36 @@ void worldToScreen(T eye[3], T euler[3], T dst[3], T viewport[2], T* xy)
 		xy[0] = 0.0;
 	if (abs(xy[1]) < 0.000001)
 		xy[1] = 0.0;
+}
+
+template <typename T>
+void worldToScreen_Matrix(T eyepos[3], T eyeEuler[3], T viewport[2], T objpos[3], T screen[2])
+{
+	Matrix<T> dcm = SetDCM<T>(eyeEuler[0], eyeEuler[1], eyeEuler[2]);
+	dcm.Transposition();
+	Matrix<T> conv(4, 4, 0);
+	for(int i = 0; i < 3; i++)
+	{
+		for(int j = 0;j < 3; j++)
+		{
+			conv.element[i][j] = dcm.element[i][j];
+		}
+	}
+	conv.element[3][0] = eyepos[0];
+	conv.element[3][1] = eyepos[1];
+	conv.element[3][2] = eyepos[2];
+	conv.element[3][3] = 1.0;
+	conv = conv.Inverse<T>();
+	Matrix<T> obj(1, 4, 1);
+	for (int i = 0; i < 3; i++)
+	{
+		obj.element[0][i] = objpos[i];
+	}
+	obj = obj * conv;
+	T LimitX = obj.element[0][1] * tanf(DEG2RAD(viewport[0] / 2.0f));
+	T LimitY = obj.element[0][1] * tanf(DEG2RAD(viewport[1] / 2.0f));
+	screen[0] = obj.element[0][0] / LimitX;
+	screen[1] = obj.element[0][2] / LimitY;
 }
 
 }
