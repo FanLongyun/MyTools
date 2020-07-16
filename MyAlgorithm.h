@@ -6,7 +6,7 @@
 #include <vector>
 #include <algorithm>
 
-#define PI	3.1415926535897932384626
+#define PAI	3.1415926535897932384626
 //#include "coordcnv.h"
 
 //#ifndef DLL_API
@@ -15,8 +15,8 @@
 //#define DECLDIR __declspec(dllexport)
 //#endif
 
-#define DEG2RAD(deg) deg * PI / 180.0
-#define RAD2DEG(rad) rad * 180.0 / PI
+#define DEG2RAD(deg) deg * PAI / 180.0
+#define RAD2DEG(rad) rad * 180.0 / PAI
 
 struct POSITIONSTRUCT
 {
@@ -681,7 +681,7 @@ T Vector3<T>::operator*(const Vector3<T>& vec) const
 }
 
 template <typename T>
-Vector3<T> Vector3 <T>::CrossMult(const Vector3& vec) const
+Vector3<T> Vector3 <T>::CrossMult(const Vector3<T>& vec) const
 {
     Vector3<T> result;
     result.x = y * vec.z - z * vec.y;
@@ -809,16 +809,16 @@ void vec3_To_Euler(const Vector3<T>& vec3, T Euler[3])
 	}
 	if (vec3.y < 0.0)
 	{
-		Euler[0] = -1.0 * PI + abs(vec3.x) / vec3.x * atan(vec3.x / vec3.y);
+		Euler[0] = -1.0 * PAI + abs(vec3.x) / vec3.x * atan(vec3.x / vec3.y);
 	}
 	if(vec3.y == 0.0)
 	{
-		Euler[0] = -1.0 * PI / 2.0 * abs(vec3.x) / vec3.x;
+		Euler[0] = -1.0 * PAI / 2.0 * abs(vec3.x) / vec3.x;
 	}
 	if(vec3.x !=0 || vec3.y != 0)
 		Euler[1] = atan(vec3.z / sqrt(vec3.x * vec3.x + vec3.y * vec3.y));
 	else
-		Euler[1] = PI * abs(vec3.z) / vec3.z;
+		Euler[1] = PAI * abs(vec3.z) / vec3.z;
 	Euler[0] = RAD2DEG(Euler[0]);
 	Euler[1] = RAD2DEG(Euler[1]);
 	Euler[2] = 0.0;
@@ -888,6 +888,122 @@ std::pair<MyPoint<T>*, int> PolygonSlicer(const MyPoint<T>* const vertexarray, c
 
     return pairArray;
 }
+
+// 四元数类
+template <typename T>
+class Quaternion
+{
+public:
+	T w;
+	T x;
+	T y;
+	T z;
+
+	Quaternion(T pW, T pX, T pY, T pZ)
+	{
+		w = pW;
+		x = pX;
+		y = pY;
+		z = pZ;
+	}
+	Quaternion()
+	{
+		w = 1;
+		x = 0;
+		y = 0;
+		z = 0;
+	}
+
+	// 重置为标准四元数
+	void identity()
+	{
+		w = 1.0;
+		x = 0.0;
+		y = 0.0;
+		z = 0.0;
+	}
+
+	void setToRotateAboutX(T theta)
+	{
+
+	}
+
+	void setToRotateAboutY(T theta)
+	{
+
+	}
+
+	void setToRotateAboutZ(T theta)
+	{
+
+	}
+
+	void setToRotateAboutAxis(const Vector3<T>& axis, T theta)
+	{
+
+	}
+
+	// 置为单位四元数
+	void normalize()
+	{
+
+	}
+
+	// 四元数求模
+	T mol()
+	{
+		return sqrt(w * w + x * x + y * y + z * z);
+	}
+
+	// 求共轭四元数
+	Quaternion adjoint()
+	{
+		Quaternion<T> result;
+		result.w = this->w;
+		result.x = -this->x;
+		result.y = -this->y;
+		result.z = -this->z;
+
+		return result;
+	}
+
+	// 四元数求逆
+	Quaternion inverse()
+	{
+		return this->adjoint() / this->mol();
+	}
+
+	Quaternion operator*(const Quaternion& param)
+	{
+		Quaternion<T> result;
+		result.w = this->w * param.w - this->x * param.x - this->y * param.y - this->z * param.z;
+		result.x = this->w * param.x + this->x * param.w + this->y * param.z - this->z * param.y;
+		result.y = this->w * param.y + this->y * param.w - this->x * param.z + this->z * param.x;
+		result.z = this->w * param.z + this->z * param.w + this->x * param.y - this->y * param.x;
+
+		return result;
+	}
+
+	Quaternion operator/(T param)
+	{
+		Quaternion<T> result;
+		if(abs(param) > 0.000001)
+		{
+			result.w = w / param;
+			result.x = x / param;
+			result.y = y / param;
+			result.z = z / param;
+		}
+		else
+		{
+			result.w = 1;
+			result.x = 0;
+			result.y = 0;
+			result.z = 0;
+		}
+		return result;
+	}
+};
 
 // QUAd q = [w, n] = [cos(a), n*sin(a)] = [cos(a) x*sin(a) y*sin(a) z*sin(a)]
 template <typename T>
@@ -976,6 +1092,22 @@ QUAd<T> QUAdSlerp(const QUAd<T> *QUAdOne, const QUAd<T> *QUAdTwo, double t)
     result.z = minusOne.z * k0 + QUAdTwo->z * k1;
 
     return result;
+}
+
+template <typename T>
+Vector3<T> rotateAroundPoint(Vector3<T> src, Vector3<T> tar, Vector3<T> Axis, T theta)
+{
+	T rad = DEG2RAD(theta / 2.0f);
+	Quaternion<T> temp(cosf(rad), sinf(rad) * Axis.x, sinf(rad) * Axis.y, sinf(rad) * Axis.z);
+	Vector3<T> delta(src.x - tar.x, src.y - tar.y, src.z - tar.z);
+	Quaternion<T> source(0, delta.x, delta.y, delta.z);
+	Quaternion<T> invTemp = temp.inverse();
+	Quaternion<T> quad = temp * source * invTemp;
+	Vector3<T> result;
+	result.x = quad.x + tar.x;
+	result.y = quad.y + tar.y;
+	result.z = quad.z + tar.z;
+	return result;
 }
 
 /*
@@ -1315,43 +1447,31 @@ bool myTrackTrail(T DstPos[3], T DstRot[3], T SrcPos[3], T SrcRot[3], T CloseEno
 	T deltaZ = DstPos[2] - SrcPos[2];
 	//double deltaH = RAD2DEG(atan(deltaX / deltaY))/* - m_missilePos.yaw*/;
 	T deltaH;
-	if(abs(deltaY - 0.0) < 0.00001)
+
+	if(deltaY > 0)
 	{
-		if(deltaX > 0.0)
-		{
-			deltaH = -90.0;
-		}
-		if(deltaX < 0.0)
-			deltaH = 90.0;
-		if(deltaX - 0.0 < 0.00001)
-			deltaH = 0.0;
+		deltaH = RAD2DEG(atan(deltaX / deltaY));
 	}
-	if(abs(deltaX - 0.0) < 0.0001)
+	if(abs(deltaY) < 0.000001)
 	{
-		if(deltaY > 0.0)
-			deltaH = 0.0;
-		if(deltaY < 0.0)
-			deltaH = 180.0;
+		deltaH = deltaX / abs(deltaX) * 90.0;
 	}
-	if(deltaY > 0.0 && !(abs(deltaX - 0.0) < 0.0001))
+	if(deltaY < 0 && !(abs(deltaX) < 0.000001))
 	{
-		deltaH = -1.0 * RAD2DEG(atan(deltaX / deltaY));
+		deltaH = RAD2DEG(atan(deltaX / deltaY)) + deltaX / abs(deltaX) * 180.0;
 	}
-	if(deltaY < 0.0 && deltaX < 0.0)
+	if(deltaY < 0 && abs(deltaX) < 0.000001)
 	{
-		deltaH = 180.0 - RAD2DEG(atan(abs(deltaX) / abs(deltaY)));
+		deltaH = -180.0f;
 	}
-	if(deltaY < 0.0 && deltaX > 0.0)
-	{
-		deltaH = -180.0 + RAD2DEG(atan(deltaX / abs(deltaY)));
-	}
-	double deltaP = RAD2DEG(asin(deltaZ / sqrt(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ)))/* - m_missilePos.pitch*/;
+
+	T deltaP = RAD2DEG(asin(deltaZ / sqrt(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ)));
 
 	SrcRot[0] = deltaH;
 	SrcRot[1] = deltaP;
 	SrcRot[2] = 0.0;
 
-	Matrix<T> m_DCM = SetDCM<T>(-SrcRot[0], -SrcRot[1], -SrcRot[2]);
+	Matrix<T> m_DCM = SetDCM<T>(-SrcRot[0], -SrcRot[1], SrcRot[2]);
 	m_DCM.Transposition();
 	Matrix<T> m_pos(1, 3, 0);
 	m_pos.element[0][0] = 0.0;
@@ -1536,4 +1656,120 @@ void worldToScreen_Matrix(T eyepos[3], T eyeEuler[3], T viewport[2], T objpos[3]
 	screen[1] = obj.element[0][2] / LimitY;
 }
 
+
+template <typename T>
+void calcDragPosition(T pos[3], T ori[3], T distance, T radius, T alpha, T flarePos[3])	// 圆形拖曳
+{
+	Matrix<T> m_DCM = SetDCM<T>(ori[0], ori[1], ori[2]);
+	m_DCM.Transposition();
+	Matrix<T> m_pos(1, 3, 0);
+	m_pos.element[0][0] = radius * cos(DEG2RAD(alpha));
+	m_pos.element[0][1] = -distance;
+	m_pos.element[0][2] = radius * sin(DEG2RAD(alpha));
+	Matrix<T> dst(1, 3, 0);
+	dst = matrixMul<T>(m_pos, m_DCM);
+
+	flarePos[0] = pos[0] + dst.element[0][0];
+	flarePos[1] = pos[1] + dst.element[0][1];
+	flarePos[2] = pos[2] + dst.element[0][2];
+}
+
+template <typename T>
+void calcDragPosition(T pos[3], T ori[3], T distance, T longAxis, T shortAxis, T alpha, T theta, T flarePos[3])	// 椭圆拖曳 alpha:椭圆角度 theta:长轴指向
+{
+	Matrix<T> m_DCM = SetDCM<T>(ori[0], ori[1], ori[2] - theta);
+	m_DCM.Transposition();
+	Matrix<T> m_pos(1, 3, 0);
+	m_pos.element[0][0] = longAxis * cos(DEG2RAD(alpha));
+	m_pos.element[0][1] = -distance;
+	m_pos.element[0][2] = shortAxis * sin(DEG2RAD(alpha));
+	Matrix<T> dst(1, 3, 0);
+	dst = matrixMul<T>(m_pos, m_DCM);
+
+	flarePos[0] = pos[0] + dst.element[0][0];
+	flarePos[1] = pos[1] + dst.element[0][1];
+	flarePos[2] = pos[2] + dst.element[0][2];
+}
+
+template <typename T>
+void calcDragPosition(T pos[3], T ori[3], T distance, T Range, T alpha, T theta, T flarePos[3])	// 直线拖曳 alpha:往复角度参数 theta:直线指向
+{
+	Matrix<T> m_DCM = SetDCM<T>(ori[0], ori[1], ori[2]);
+	m_DCM.Transposition();
+	Matrix<T> m_pos(1, 3, 0);
+	m_pos.element[0][0] = Range * sin(DEG2RAD(alpha)) * cos(DEG2RAD(theta));
+	m_pos.element[0][1] = -distance;
+	m_pos.element[0][2] = Range * sin(DEG2RAD(alpha)) * sin(DEG2RAD(theta));
+	Matrix<T> dst(1, 3, 0);
+	dst = matrixMul<T>(m_pos, m_DCM);
+
+	flarePos[0] = pos[0] + dst.element[0][0];
+	flarePos[1] = pos[1] + dst.element[0][1];
+	flarePos[2] = pos[2] + dst.element[0][2];
+}
+
+template <typename T>
+void calcEjectPosition(T direction[3], T speed, T result[3])    // 直线
+{
+	float coff = 10.0f;
+    T base = sqrt(direction[0] * direction[0] + direction[2] * direction[2] + direction[1] * direction[1]);
+    result[0] = direction[0] * speed / base / coff;
+    result[1] = direction[1] * speed / base / coff;
+    result[2] = direction[2] * speed / base / coff;
+}
+
+template <typename T>
+void calcEjectPosition(T direction[3], T speed, T force[3], T time, T result[3])    // 抛物线
+{
+	float coff = 30.0f;
+    T base = sqrt(direction[0] * direction[0] + direction[2] * direction[2] + direction[1] * direction[1]);
+    T forceBase = sqrt(force[0] * force[0] + force[1] * force[1] + force[2] * force[2]);
+    result[0] = direction[0] / base * speed + (force[0] / forceBase) * time * time / coff / coff;
+    result[1] = direction[1] / base * speed + (force[1] / forceBase) * time * time / coff / coff;
+    result[2] = direction[2] / base * speed + (force[2] / forceBase) * time * time / coff / coff;
+}
+
+
+
+template <typename T>
+void calcRelativeAngle(T SrcPos[3], T DstPos[3], T& yaw, T& pitch)
+{
+	T deltaX = DstPos[0] - SrcPos[0];
+	T deltaY = DstPos[1] - SrcPos[1];
+	T deltaZ = DstPos[2] - SrcPos[2]; 
+
+	if(deltaY > 0)
+	{
+		yaw = RAD2DEG(atan(deltaX / deltaY));
+	}
+	if(abs(deltaY) < 0.000001)
+	{
+		yaw = deltaX / abs(deltaX) * 90.0;
+	}
+	if(deltaY < 0 && !(abs(deltaX) < 0.000001))
+	{
+		yaw = RAD2DEG(atan(deltaX / deltaY)) + deltaX / abs(deltaX) * 180.0;
+	}
+	if(deltaY < 0 && abs(deltaX) < 0.000001)
+	{
+		yaw = -180.0f;
+	}
+	if(abs(deltaX) < 0.000001)
+	{
+		if(deltaY >0.0f)
+		{
+			yaw = 0.0f;
+		}
+		if(deltaY < 0.0f)
+		{
+			yaw = 180.0f;
+		}
+		if(abs(deltaY) < 0.000001)
+		{
+			yaw = 0.0f;
+		}
+	}
+
+	pitch = RAD2DEG(asin(deltaZ / sqrt(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ)));
+}
 }
