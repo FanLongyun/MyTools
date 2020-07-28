@@ -65,7 +65,10 @@ Matrix<T> MakeMatrix(int row, int column, T num);
 
 // 计算方向余弦矩阵
 template <typename T>
-Matrix<T> SetDCM(float psi, float theta, float phi);	// 单位:角度  psi: -180 --- 180 右转为正  theta: -90 --- 90 向上为正
+Matrix<T> SetDCM_W2L(float psi, float theta, float phi);	// 单位:角度  psi: -180 --- 180 左转为正  theta: -90 --- 90 向上为正
+
+template <typename T>
+Matrix<T> SetDCM_L2W(float psi, float theta, float phi);	// 单位:角度  psi: -180 --- 180 左转为正  theta: -90 --- 90 向上为正
 
 // 矩阵转置
 template <typename T>
@@ -378,7 +381,7 @@ Matrix<G> Matrix<T>::Inverse() const
 }
 
 template <typename T>
-Matrix<T> SetDCM(float psi, float theta, float phi)		// h p r
+Matrix<T> SetDCM_W2L(float psi, float theta, float phi)		// h p r
 {
     if (psi > 180.0f)
         psi -= 360.0f;
@@ -444,6 +447,75 @@ Matrix<T> SetDCM(float psi, float theta, float phi)		// h p r
 	Matrix<T> temp = RotZ * RotX;
 	DCM = temp * RotY;
     return DCM;
+}
+
+template <typename T>
+Matrix<T> SetDCM_L2W(float psi, float theta, float phi)		// h p r
+{
+	if (psi > 180.0f)
+		psi -= 360.0f;
+	if (psi < -180.0f)
+		psi += 360.0f;
+	if (theta > 90.0f)
+		theta -= 360.0f;
+	if (theta < -90.0f)
+		theta += 360.0f;
+	if (phi > 180.0f)
+		phi -= 360.0f;
+	if (phi < -180.0f)
+		phi += 360.0f;
+
+	Matrix<T> DCM(3, 3, 0);
+	float rad_psi = DEG2RAD(psi);
+	float rad_theta = DEG2RAD(theta);
+	float rad_phi = DEG2RAD(phi);
+
+	//DCM.element[0][0] = cosf(rad_psi) * cosf(rad_theta);
+	//DCM.element[0][1] = sinf(rad_phi) * sinf(rad_theta) * cosf(rad_psi) - sinf(rad_psi) * cosf(rad_phi);
+	//DCM.element[0][2] = cosf(rad_psi) * sinf(rad_theta) * cosf(rad_phi) + sinf(rad_psi) * sinf(rad_phi);
+	//DCM.element[1][0] = sinf(rad_phi) * cosf(rad_theta);
+	////DCM.element[1][0] = sinf(rad_psi) * cosf(rad_theta);
+	//DCM.element[1][1] = sinf(rad_psi) * sinf(rad_theta) * sinf(rad_phi) + cosf(rad_psi) * cosf(rad_phi);
+	//DCM.element[1][2] = sinf(rad_psi) * sinf(rad_theta) * cosf(rad_phi) - cosf(rad_psi) * sinf(rad_phi);
+	//DCM.element[2][0] = -1.0f * sinf(rad_theta);
+	//DCM.element[2][1] = cosf(rad_theta) * sinf(rad_phi);
+	//DCM.element[2][2] = cosf(rad_theta) * cosf(rad_phi);
+	Matrix<T> RotX(3, 3, 0);
+	Matrix<T> RotY(3, 3, 0);
+	Matrix<T> RotZ(3, 3, 0);
+	RotX.element[0][0] = 1.0;
+	RotX.element[0][1] = 0.0;
+	RotX.element[0][2] = 0.0;
+	RotX.element[1][0] = 0.0;
+	RotX.element[1][1] = cos(rad_theta);
+	RotX.element[1][2] = sin(rad_theta);
+	RotX.element[2][0] = 0.0;
+	RotX.element[2][1] = -1.0f * sin(rad_theta);
+	RotX.element[2][2] = cos(rad_theta);
+
+	RotY.element[0][0] = cos(rad_phi);
+	RotY.element[0][1] = 0.0;
+	RotY.element[0][2] = -1.0f * sin(rad_phi);
+	RotY.element[1][0] = 0.0;
+	RotY.element[1][1] = 1.0;
+	RotY.element[1][2] = 0.0;
+	RotY.element[2][0] = sin(rad_phi);
+	RotY.element[2][1] = 0;
+	RotY.element[2][2] = cos(rad_phi);
+
+	RotZ.element[0][0] = cos(rad_psi);
+	RotZ.element[0][1] = sin(rad_psi);
+	RotZ.element[0][2] = 0.0;
+	RotZ.element[1][0] = -1.0f * sin(rad_psi);
+	RotZ.element[1][1] = cos(rad_psi);
+	RotZ.element[1][2] = 0.0;
+	RotZ.element[2][0] = 0.0;
+	RotZ.element[2][1] = 0;
+	RotZ.element[2][2] = 1.0;
+	// Y->X->Z
+	Matrix<T> temp = RotY * RotX;
+	DCM = temp * RotZ;
+	return DCM;
 }
 
 template <typename T>
@@ -1101,6 +1173,7 @@ Vector3<T> rotateAroundPoint(Vector3<T> src, Vector3<T> tar, Vector3<T> Axis, T 
 	Quaternion<T> temp(cosf(rad), sinf(rad) * Axis.x, sinf(rad) * Axis.y, sinf(rad) * Axis.z);
 	Vector3<T> delta(src.x - tar.x, src.y - tar.y, src.z - tar.z);
 	Quaternion<T> source(0, delta.x, delta.y, delta.z);
+	Vector3<T> unitDelta = delta.normalize();
 	Quaternion<T> invTemp = temp.inverse();
 	Quaternion<T> quad = temp * source * invTemp;
 	Vector3<T> result;
@@ -1471,8 +1544,8 @@ bool myTrackTrail(T DstPos[3], T DstRot[3], T SrcPos[3], T SrcRot[3], T CloseEno
 	SrcRot[1] = deltaP;
 	SrcRot[2] = 0.0;
 
-	Matrix<T> m_DCM = SetDCM<T>(SrcRot[0], SrcRot[1], SrcRot[2]);
-	m_DCM.Transposition();
+	Matrix<T> m_DCM = SetDCM_L2W<T>(SrcRot[0], SrcRot[1], SrcRot[2]);
+	//m_DCM.Transposition();
 	Matrix<T> m_pos(1, 3, 0);
 	m_pos.element[0][0] = 0.0;
 	m_pos.element[0][1] = Speed;
@@ -1515,8 +1588,7 @@ bool myTrackTrail2(T DstPos[3], T DstRot[3], T SrcPos[3], T SrcRot[3], T CloseEn
 template <typename T>
 void worldToScreen(T eye[3], T euler[3], T dst[3], T viewport[2], T* xy)
 {
-	Matrix<T> DCM = SetDCM<T>(euler[0], euler[1], euler[2]);
-	DCM.Transposition();
+	Matrix<T> DCM = SetDCM_L2W()<T>(euler[0], euler[1], euler[2]);
 	Matrix<T>  mat(1, 3, 0);
 	mat.element[0][1] = 1.0;
 	Matrix<T> Odot(1, 3, 0);
@@ -1574,29 +1646,25 @@ void worldToScreen(T eye[3], T euler[3], T dst[3], T viewport[2], T* xy)
 	////mat.element[0][1] = sqrt(OD.mod() * OD.mod() + 0.25 * AB * AB + 0.25 * BC * BC);
 	//Matrix<T> matOC = matrixMul<T>(mat, DCM);
 	//Vector3<T> C(matOC.element[0][0] + eye[0], matOC.element[0][1] + eye[1], matOC.element[0][2] + eye[2]);
-	DCM = SetDCM<T>(euler[0], euler[1], euler[2] - viewport[1] * 0.5);
-	DCM.Transposition();
+	DCM = SetDCM_L2W()<T>(euler[0], euler[1], euler[2] - viewport[1] * 0.5);
 	mat.element[0][1] = sqrt(OD.mod() * OD.mod() + 0.25f * AB * AB);
 	Matrix<T> OE = matrixMul(mat, DCM);
 	Vector3<T> E(OE.element[0][0] + eye[0], OE.element[0][1] + eye[1], OE.element[0][2] + eye[2]);
 	Vector3<T> ME(E.x - M.x, E.y - M.y, E.z - M.z);
 
-	DCM = SetDCM<T>(euler[0], euler[1], euler[2] + viewport[1] * 0.5);
-	DCM.Transposition();
+	DCM = SetDCM_L2W<T>(euler[0], euler[1], euler[2] + viewport[1] * 0.5);
 	mat.element[0][1] = sqrt(OD.mod() * OD.mod() + 0.25f * AB * AB);
 	Matrix<T> OG = matrixMul(mat, DCM);
 	Vector3<T> G(OG.element[0][0] + eye[0], OG.element[0][1] + eye[1], OG.element[0][2] + eye[2]);
 	Vector3<T> MG(G.x - M.x, G.y - M.y, G.z - M.z);
 
-	DCM = SetDCM<T>(euler[0] + viewport[0] * 0.5, euler[1], euler[2]);
-	DCM.Transposition();
+	DCM = SetDCM_L2W<T>(euler[0] + viewport[0] * 0.5, euler[1], euler[2]);
 	mat.element[0][1] = sqrt(OD.mod() * OD.mod() + 0.25f * BC * BC);
 	Matrix<T> OF = matrixMul(mat, DCM);
 	Vector3<T> F(OF.element[0][0] + eye[0], OF.element[0][1] + eye[1], OF.element[0][2] + eye[2]);
 	Vector3<T> MF(F.x - M.x, F.y - M.y, F.z - M.z);
 
-	DCM = SetDCM<T>(euler[0] - viewport[0] * 0.5, euler[1], euler[2]);
-	DCM.Transposition();
+	DCM = SetDCM_L2W<T>(euler[0] - viewport[0] * 0.5, euler[1], euler[2]);
 	mat.element[0][1] = sqrt(OD.mod() * OD.mod() + 0.25f * BC * BC);
 	Matrix<T> OH = matrixMul(mat, DCM);
 	Vector3<T> H(OH.element[0][0] + eye[0], OH.element[0][1] + eye[1], OH.element[0][2] + eye[2]);
@@ -1629,8 +1697,7 @@ void worldToScreen(T eye[3], T euler[3], T dst[3], T viewport[2], T* xy)
 template <typename T>
 void worldToScreen_Matrix(T eyepos[3], T eyeEuler[3], T viewport[2], T objpos[3], T screen[2])
 {
-	Matrix<T> dcm = SetDCM<T>(eyeEuler[0], eyeEuler[1], eyeEuler[2]);
-	dcm.Transposition();
+	Matrix<T> dcm = SetDCM_L2W<T>(eyeEuler[0], eyeEuler[1], eyeEuler[2]);
 	Matrix<T> conv(4, 4, 0);
 	for(int i = 0; i < 3; i++)
 	{
@@ -1660,8 +1727,7 @@ void worldToScreen_Matrix(T eyepos[3], T eyeEuler[3], T viewport[2], T objpos[3]
 template <typename T>
 void calcDragPosition(T pos[3], T ori[3], T distance, T radius, T alpha, T flarePos[3])	// 圆形拖曳
 {
-	Matrix<T> m_DCM = SetDCM<T>(ori[0], ori[1], ori[2]);
-	m_DCM.Transposition();
+	Matrix<T> m_DCM = SetDCM_L2W<T>(ori[0], ori[1], ori[2]);
 	Matrix<T> m_pos(1, 3, 0);
 	m_pos.element[0][0] = radius * cos(DEG2RAD(alpha));
 	m_pos.element[0][1] = -distance;
@@ -1677,8 +1743,7 @@ void calcDragPosition(T pos[3], T ori[3], T distance, T radius, T alpha, T flare
 template <typename T>
 void calcDragPosition(T pos[3], T ori[3], T distance, T longAxis, T shortAxis, T alpha, T theta, T flarePos[3])	// 椭圆拖曳 alpha:椭圆角度 theta:长轴指向
 {
-	Matrix<T> m_DCM = SetDCM<T>(ori[0], ori[1], ori[2] - theta);
-	m_DCM.Transposition();
+	Matrix<T> m_DCM = SetDCM_L2W<T>(ori[0], ori[1], ori[2] - theta);
 	Matrix<T> m_pos(1, 3, 0);
 	m_pos.element[0][0] = longAxis * cos(DEG2RAD(alpha));
 	m_pos.element[0][1] = -distance;
@@ -1694,8 +1759,7 @@ void calcDragPosition(T pos[3], T ori[3], T distance, T longAxis, T shortAxis, T
 template <typename T>
 void calcDragPosition(T pos[3], T ori[3], T distance, T Range, T alpha, T theta, T flarePos[3])	// 直线拖曳 alpha:往复角度参数 theta:直线指向
 {
-	Matrix<T> m_DCM = SetDCM<T>(ori[0], ori[1], ori[2]);
-	m_DCM.Transposition();
+	Matrix<T> m_DCM = SetDCM_L2W<T>(ori[0], ori[1], ori[2]);
 	Matrix<T> m_pos(1, 3, 0);
 	m_pos.element[0][0] = Range * sin(DEG2RAD(alpha)) * cos(DEG2RAD(theta));
 	m_pos.element[0][1] = -distance;
