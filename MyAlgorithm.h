@@ -763,6 +763,7 @@ Vector3<T> Vector3 <T>::CrossMult(const Vector3<T>& vec) const
     return result;
 }
 
+
 // 2DœÚ¡ø¿‡
 template <typename T>
 class Vector2
@@ -842,9 +843,10 @@ template <typename T>
 template <typename G>
 Vector2<G> Vector2<T>::operator *(const G& Scalar)
 {
-	x = x * Scalar;
-	y = y * Scalar;
-	return *this;
+    Vector2<T> result;
+    result.x = x * Scalar;
+    result.y = y * Scalar;
+    return result;
 }
 
 template<typename T>
@@ -857,17 +859,43 @@ Vector2<T> Vector2<T>::operator *=(const G& Scalar)
 }
 
 template<typename T>
+template<typename G>
+Vector2<T> Vector2<T>:: operator/(const G& Scalar) const
+{
+    Vector2<T> result;
+    result.x = this->x / Scalar;
+    result.y = this->y / Scalar;
+
+    return result;
+}
+template<typename T>
 Vector2<T> Vector2<T>::normalize()
 {
-	if(x != 0 && y != 0)
-	{
-		x = x / mod();
-		y = y / mod();
-	}
-
+    if(!(this->x == 0.0 && this->y == 0.0))
+    {
+        this->x = this->x / mod();
+        this->y = this->y / mod();
+    }
 	return *this;
 }
 
+template <typename T>
+Vector2<T> Vector2<T>::operator+(const Vector2& param) const
+{
+    Vector2<T> result;
+    result.x = this->x + param.x;
+    result.y = this->y + param.y;
+    return result;
+}
+
+template <typename T>
+Vector2<T> Vector2<T>::operator-(const Vector2& param) const
+{
+    Vector2<T> result;
+    result.x = this->x - param.x;
+    result.y = this->y - param.y;
+    return result;
+}
 
 // vector to Euler angle. roll = 0.0
 template <typename T>
@@ -1575,7 +1603,7 @@ bool myTrackTrail2(T DstPos[3], T DstRot[3], T SrcPos[3], T SrcRot[3], T CloseEn
 	T cosTheta = vecA * vecAB / (vecA.mod() * vecAB.mod());
 	vecA.normalize();
 	T vecTemp = vecAB.mod() * cosTheta;
-	Vector2<T> vecAD = vecA.operator *<T>(vecTemp);
+    Vector2<T> vecAD = vecA * vecTemp;
 	vecAD *= 0.65;
 	double D[3];
 	D[0] = DstPos[0] + vecAD.x;
@@ -1588,7 +1616,7 @@ bool myTrackTrail2(T DstPos[3], T DstRot[3], T SrcPos[3], T SrcRot[3], T CloseEn
 template <typename T>
 void worldToScreen(T eye[3], T euler[3], T dst[3], T viewport[2], T* xy)
 {
-	Matrix<T> DCM = SetDCM_L2W()<T>(euler[0], euler[1], euler[2]);
+    Matrix<T> DCM = SetDCM_L2W<T>(euler[0], euler[1], euler[2]);
 	Matrix<T>  mat(1, 3, 0);
 	mat.element[0][1] = 1.0;
 	Matrix<T> Odot(1, 3, 0);
@@ -1646,7 +1674,7 @@ void worldToScreen(T eye[3], T euler[3], T dst[3], T viewport[2], T* xy)
 	////mat.element[0][1] = sqrt(OD.mod() * OD.mod() + 0.25 * AB * AB + 0.25 * BC * BC);
 	//Matrix<T> matOC = matrixMul<T>(mat, DCM);
 	//Vector3<T> C(matOC.element[0][0] + eye[0], matOC.element[0][1] + eye[1], matOC.element[0][2] + eye[2]);
-	DCM = SetDCM_L2W()<T>(euler[0], euler[1], euler[2] - viewport[1] * 0.5);
+    DCM = SetDCM_L2W<T>(euler[0], euler[1], euler[2] - viewport[1] * 0.5);
 	mat.element[0][1] = sqrt(OD.mod() * OD.mod() + 0.25f * AB * AB);
 	Matrix<T> OE = matrixMul(mat, DCM);
 	Vector3<T> E(OE.element[0][0] + eye[0], OE.element[0][1] + eye[1], OE.element[0][2] + eye[2]);
@@ -1710,7 +1738,8 @@ void worldToScreen_Matrix(T eyepos[3], T eyeEuler[3], T viewport[2], T objpos[3]
 	conv.element[3][1] = eyepos[1];
 	conv.element[3][2] = eyepos[2];
 	conv.element[3][3] = 1.0;
-	conv = conv.Inverse<T>();
+//	conv = conv.Inverse<T>();
+    conv = conv.Inverse();
 	Matrix<T> obj(1, 4, 1);
 	for (int i = 0; i < 3; i++)
 	{
